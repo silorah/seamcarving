@@ -6,6 +6,7 @@
 struct hitRecord{
     Eigen::Vector3d color;
     int t;
+    bool inside;
 };
 struct ray{
     Eigen::Vector3d from;
@@ -26,11 +27,20 @@ class Triangle: public Geo{
         hitRecord intersect(ray r){
             hitRecord hr;
             Eigen::Matrix3d m;
-            m<<vert[1]-vert[0],vert[2]-vert[0],-r.dir;
+            // m<<(vert[1]-vert[0]),(vert[2]-vert[0]),(-r.dir);
+            m.col(0)=vert[1]-vert[0];
+            m.col(1)=vert[2]-vert[0];
+            m.col(2)=-r.dir;
             Eigen::Vector3d sol=m.colPivHouseholderQr().solve(r.from-vert[0]);
+            //std::cout<<m<<std::endl;
             hr.t=sol[2];
-            if(sol[0]>0&&sol[1]<1&&(sol[0]+sol[1]<1)&&hr.t>0){
+            if(sol[0]>0&&sol[1]<1&&(sol[0]+sol[1]<1)){
                 hr.color=color;
+                hr.inside=true;
+                // std::cout<<"Hit!"<<hr.t<<std::endl;
+            }
+            else{
+                hr.inside=false;
             }
             return hr;
         }
@@ -40,19 +50,19 @@ class Triangle: public Geo{
 };
 
 std::vector<Geo*> polygons;
-std::vector<Eigen::Vector3d> vertexs;
 Eigen::Vector3d background;
 Eigen::Vector3d fill;
 Eigen::Vector3d from;
 Eigen::Vector3d at;
 Eigen::Vector3d up;
 Eigen::Vector3d w,u,v;
-double imgHalfWidth,pixelWidth,aspect;
-int resx,resy,angle;
+double imgHalfWidth,pixelWidth,aspect,angle,hither;
+int resx,resy;
 bool nextTri,nextSphere,nextPoly,nextView;
 
 void readInput(std::string in){
     int numVert;
+    std::vector<Eigen::Vector3d> vertexs;
     std::ifstream fil(in);
     std::string line,junk;
     while(!fil.eof()){
@@ -78,6 +88,9 @@ void readInput(std::string in){
             }
             else if(junk=="angle"){
                 str>>angle;
+            }
+            else if(junk=="hither"){
+                str>>hither;
             }
             else if(junk=="resolution"){
                 str>>resx>>resy;
@@ -120,14 +133,25 @@ void readInput(std::string in){
 }
 ray calcRay(int i,int j){
     double m=(-imgHalfWidth+pixelWidth/2.0)+j*pixelWidth;
-    double n=(-((imgHalfWidth+pixelWidth)/2.0)/aspect)+i+pixelWidth;
+    double n=-(imgHalfWidth+pixelWidth/2.0)/aspect+i*pixelWidth;
+    double o=1;
     ray r;
-    r.dir=m*u +n*v+1*w;
+    r.dir=m*u+n*v+hither*w;
     r.from=from;
     return r;
 }
 Eigen::Vector3d trace(ray r){
-
+    int min_t=INT32_MAX;
+    Eigen::Vector3d color=background;
+    for(int i=0;i<polygons.size();i++){
+        hitRecord hr=polygons.at(i)->intersect(r);
+        if(hr.t<min_t&&hr.t>0&&hr.inside){
+            min_t=hr.t;
+            color=hr.color;
+            // std::cout<<polygons.size()<<std::endl;
+        }
+    }
+    return color;
 }
 
 int main(int argc, char* argv[]){
@@ -146,8 +170,8 @@ int main(int argc, char* argv[]){
     w=(from-at).normalized();
     u=up.cross(w).normalized();
     v=w.cross(u);
-    imgHalfWidth=tan((M_PI*angle/180.0)/2);
-    pixelWidth=imgHalfWidth*2.0/resx;
+    imgHalfWidth=tan(M_PI*angle/180.0/2.0)*hither;
+    pixelWidth=(imgHalfWidth*2)/resx*2.0;
     aspect=resx/resy;
     for(int i=0;i<resy;i++){
         for(int j=0;j<resx;j++){
@@ -158,6 +182,10 @@ int main(int argc, char* argv[]){
             pixels[i][j][2]=color[2]*255;
         }
     }
+    FILE *f = fopen("output.ppm","wb");
+    fprintf(f, "P6\n%d %d\n%d\n", resx, resy, 255);
+    fwrite(pixels, 1, resx*resy*3, f);
+    fclose(f);
     while(!polygons.empty()){
         Geo* temp;
         temp=polygons.back();
