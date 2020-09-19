@@ -46,10 +46,13 @@ Eigen::Vector3d fill;
 Eigen::Vector3d from;
 Eigen::Vector3d at;
 Eigen::Vector3d up;
-int resx,resy,angle,numVert;
+Eigen::Vector3d w,u,v;
+double imgHalfWidth,pixelWidth,aspect;
+int resx,resy,angle;
 bool nextTri,nextSphere,nextPoly,nextView;
 
 void readInput(std::string in){
+    int numVert;
     std::ifstream fil(in);
     std::string line,junk;
     while(!fil.eof()){
@@ -115,13 +118,20 @@ void readInput(std::string in){
     }
     fil.close();
 }
-
+ray calcRay(int i,int j){
+    double m=(-imgHalfWidth+pixelWidth/2.0)+j*pixelWidth;
+    double n=(-((imgHalfWidth+pixelWidth)/2.0)/aspect)+i+pixelWidth;
+    ray r;
+    r.dir=m*u +n*v+1*w;
+    r.from=from;
+    return r;
+}
 Eigen::Vector3d trace(ray r){
 
 }
 
 int main(int argc, char* argv[]){
-
+    
     if(argc<2){
         std::cout<<"No input file detected"<<std::endl;
         exit(1);
@@ -131,6 +141,23 @@ int main(int argc, char* argv[]){
         std::cout<<"No output file detected, using default output file: output.ppm"<<std::endl;
     }
     readInput(argv[1]);
+    unsigned char pixels[resy][resx][3];
+    Eigen::Vector3d color;
+    w=(from-at).normalized();
+    u=up.cross(w).normalized();
+    v=w.cross(u);
+    imgHalfWidth=tan((M_PI*angle/180.0)/2);
+    pixelWidth=imgHalfWidth*2.0/resx;
+    aspect=resx/resy;
+    for(int i=0;i<resy;i++){
+        for(int j=0;j<resx;j++){
+            ray r=calcRay(i,j);
+            color=trace(r);
+            pixels[i][j][0]=color[0]*255;
+            pixels[i][j][1]=color[1]*255;
+            pixels[i][j][2]=color[2]*255;
+        }
+    }
     while(!polygons.empty()){
         Geo* temp;
         temp=polygons.back();
