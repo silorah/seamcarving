@@ -57,6 +57,24 @@ class Triangle: public Geo{
         Eigen::Vector3d color;
 };
 
+class Polygon :public Geo{
+    public:
+        Polygon(std::vector<Eigen::Vector3d> verts,Eigen::Vector3d color){
+            this->verts=verts;
+            this->color=color;
+        }
+        hitRecord intersect(ray r){
+            hitRecord hr;
+            // for(int i =0; i<verts.size()-1;i++){
+        
+            // }
+            return hr;
+        }
+    private:
+        std::vector<Eigen::Vector3d> verts;
+        Eigen::Vector3d color;
+};
+
 std::vector<Geo*> polygons;//vector of polygons in the image
 Eigen::Vector3d background;//background color
 Eigen::Vector3d fill;//fill color
@@ -116,11 +134,19 @@ void readInput(std::string in){
             nextPoly=false;
             str>>junk>>numVert;
             vertexs.clear();
-            if(numVert>=3){
+            if(numVert==3){
                 nextTri=true;
+            }
+            if(numVert>3){
+                nextPoly=true;
             }
         }
         else if(nextTri){
+            Eigen::Vector3d vert;
+            str>>vert[0]>>vert[1]>>vert[2];
+            vertexs.push_back(vert);
+        }
+        else if(nextPoly){
             Eigen::Vector3d vert;
             str>>vert[0]>>vert[1]>>vert[2];
             vertexs.push_back(vert);
@@ -136,7 +162,8 @@ void readInput(std::string in){
                 }
             }
             if(nextPoly){
-                std::cout<<"Hasn't been implemented yet"<<std::endl;
+                // std::cout<<"Hasn't been implemented yet"<<std::endl;
+                polygons.push_back(new Polygon(vertexs,fill));
             }
         }
     }
