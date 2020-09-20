@@ -151,7 +151,6 @@ void readInput(std::string in){
 ray calcRay(int i,int j){
     double m=(-imgHalfWidth+pixelWidth/2.0)+j*pixelWidth;
     double n=-(imgHalfWidth+pixelWidth/2.0)/aspect+i*pixelWidth;
-    double o=1;
     ray r;
     r.dir=m*u+n*v+hither*w;
     r.from=from;
