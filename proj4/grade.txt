@@ -2,7 +2,7 @@
   |___   25          README comment or file                |
   |      ___    1      Submitted a readme file             |
   |      ___    5      Description of assignment           |
-  |      ___    2      Clean submission(no .o .d files)    |  
+  |      ___    2      Clean submission(no .o .d files)    |
   |      ___    2      Statement of help                   |
   |      ___   10      Code Comments                       |
   |      ___    5      Regular commits and log entries     |
@@ -15,7 +15,7 @@
   |      ___    0      Parses extra input in obj file      |
   |      ___    0      Outputs valid obj image             |
   |      ___   10      Outputs correct obj file            |
-  +--------------------------------------------------------+   
+  +--------------------------------------------------------+
   |___   45          Laplacian Estimate                    |
   |      ___   35      Computes Correct Laplacian          |
   |      ___   10      Avoids Vertex-Neighbor Tables       |
@@ -30,5 +30,5 @@
   |___     25         (Ex) Biharmonic/Bilaplacian          |
   |___     50         (Ex) Loop Subdivision                |
   +--------------------------------------------------------+
-  |___                Total (of 125)                       |
+  |_0_                Total (of 125)                       | No Submission
   +--------------------------------------------------------+
