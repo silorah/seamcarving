@@ -27,14 +27,14 @@ inline Eigen::Vector3d cross(const Eigen::Vector3d &x, const Eigen::Vector3d &y)
 inline double dot(const Eigen::Vector3d &x, const Eigen::Vector3d &y) {return x.dot(y);}
 inline double cross2d(const Eigen::Vector2d &x, const Eigen::Vector2d &y) {return x[0]*y[1]-x[1]*y[0];}
 
-Eigen::Vector3d Triangle::normal(const Eigen::Vector3d &x) const {
-	Eigen::Vector3d n = cross(b-a, c-a);
+Eigen::Vector4d Triangle::normal(const Eigen::Vector4d &x) const {
+	Eigen::Vector4d n = cross(b-a, c-a);
 	n.normalize();
 	return n;
 }
 
-Eigen::Vector3d TrianglePatch::normal(const Eigen::Vector3d &x) const {
-	Eigen::Vector3d n = cross(b-a, c-a);
+Eigen::Vector4d TrianglePatch::normal(const Eigen::Vector4d &x) const {
+	Eigen::Vector4d n = cross(b-a, c-a);
 	double area = n.norm();
 	n = cross(x-a, c-a);
 	double alpha = n.norm()/area;
@@ -45,10 +45,17 @@ Eigen::Vector3d TrianglePatch::normal(const Eigen::Vector3d &x) const {
 	return n;
 }
 
-Eigen::Vector3d Poly::normal(const Eigen::Vector3d &x) const {
-	Eigen::Vector3d n = cross(verts[1]-verts[0],verts[2]-verts[0]);
+Eigen::Vector4d Poly::normal(const Eigen::Vector4d &x) const {
+	Eigen::Vector4d n = cross(verts[1]-verts[0],verts[2]-verts[0]);
 	n.normalize();
 	return n;
+}
+Camera Camera::createCamera(Eigen::Vector3d eye, Eigen::Vector3d at,Eigen::Vector3d up){
+	Camera cam;
+	cam.eye=eye;
+	cam.at=at;
+	cam.up=up;
+	return cam;
 }
 
 Renderer::Renderer(const std::string &fname) {
@@ -104,14 +111,21 @@ Renderer::Renderer(const std::string &fname) {
 		ssn>>ch;
 		}
 		ssn>>ch>>nverts;
-		std::vector<Eigen::Vector3d> vertices;
-		std::vector<Eigen::Vector3d> normals;
+		std::vector<Eigen::Vector4d> vertices;
+		std::vector<Eigen::Vector4d> normals;
 		for (unsigned int i=0; i<nverts; i++) {
 		getline(in, line);
 		std::stringstream ss(line);
 		Eigen::Vector3d v,n;
-		if (patch) ss>>v[0]>>v[1]>>v[2]>>n[0]>>n[1]>>n[2];
-		else ss>>v[0]>>v[1]>>v[2];
+		if (patch){
+			ss>>v[0]>>v[1]>>v[2]>>n[0]>>n[1]>>n[2];
+			v[3]=1;
+			n[3]=0;
+		}
+		else{
+			ss>>v[0]>>v[1]>>v[2];
+			v[3]=0;
+		}
 		vertices.push_back(v);
 		if (patch) {
 			n.normalize();
@@ -282,6 +296,8 @@ void Renderer::createImage() {
 	std::cout<<"left limit: "<<l<<std::endl;
 	std::cout<<"top limit: "<<t<<std::endl;
 	}
+	Camera *cam;
+	cam= Camera::createCamera(eye,at,up);
 	Renderer::setUpM();
 	Renderer::render();
 	Renderer::blending(im);
