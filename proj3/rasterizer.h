@@ -70,6 +70,12 @@ class Camera{
 	public:
 		Eigen::Vector3d eye,at,up;
 };
+class Fragment{
+	public:
+	Fragment(double _z,Eigen::Vector3d c):z(_z),color(c){};
+		double z;
+		Eigen::Vector3d color;
+};
 class Renderer {
 	Eigen::Vector3d bcolor, eye, at, up;
 	double angle, hither;
@@ -86,14 +92,14 @@ public:
 	void createImage();
 	void setUpM(Camera cam, double l, double r, double t, double b, double n,double resx,double resy, Eigen::Vector3d u, Eigen::Vector3d v, Eigen::Vector3d w);  
 	void vertexProcessing(std::pair<Triangle*,Fill> s,Camera cam);
-	void rasterization();
+	void rasterization(std::pair<Triangle*,Fill> t,int resy);
 	void fragmentProcessing();
-	void blending(Eigen::Vector3d * &img);
+	void blending(int resx,int resy);
 	void clipping();
-	void render(Camera cam);
+	void render(Camera cam,int resx,int resy);
 	Eigen::Vector3d shade(const HitRecord &hr) const;
 	void writeImage(const std::string &fname);
-
+	std::vector<Fragment> *fragments;
 	Eigen::Matrix4d M;
 	bool color;
 	bool phong;

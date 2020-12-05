@@ -235,31 +235,6 @@ Renderer::~Renderer() {
 	if (im) delete [] im;
 	for (unsigned int i=0; i<surfaces.size(); i++) delete surfaces[i].first;
 }
-
-Eigen::Vector3d Renderer::shade(const HitRecord &hr) const {
-	if (color) return hr.f.color;
-	Eigen::Vector3d color(0.0,0.0,0.0);
-	HitRecord dummy;
-	for (unsigned int i=0; i<lights.size(); i++) {
-	const Light &light = lights[i];
-
-	bool shadow = false;
-	if (!shadow) {
-		Eigen::Vector3d l = light.p - hr.p;
-		l.normalize();
-		Eigen::Vector3d h = l + hr.v;
-		h.normalize();
-		Eigen::Vector3d n = hr.n;
-		n.normalize();
-		double diffuse = std::max(0.0, dot(n, l));
-		double specular = pow(std::max(0.0, dot(n, h)), hr.f.shine);
-		Eigen::Vector3d c(hr.f.kd * diffuse * hr.f.color + hr.f.ks * specular * Eigen::Vector3d(1.0,1.0,1.0));
-		c[0] *= light.c[0], c[1] *= light.c[1], c[2] *= light.c[2];
-		color += c;
-	}
-	}
-	return color;
-}
 void Renderer::vertexProcessing(std::pair<Triangle*,Fill> s,Camera cam){
 	Triangle *tri=s.first;
 	Fill f=s.second;
@@ -315,10 +290,103 @@ void Renderer::vertexProcessing(std::pair<Triangle*,Fill> s,Camera cam){
 	tri->c1=color[1];
 	tri->c2=color[2];
 }
-void Renderer::render(Camera cam){
+void Renderer::rasterization(std::pair<Triangle*,Fill> t, int resy){
+	int minX,minY,maxX,maxY;
+	Triangle *tri=t.first;
+	//Find min and max xvals for bounding box
+	tri->ap[0]/=tri->ap[3];
+	tri->ap[1]/=tri->ap[3];
+	tri->ap[2]/=tri->ap[3];
+	tri->bp[0]/=tri->bp[3];
+	tri->bp[1]/=tri->bp[3];
+	tri->bp[2]/=tri->bp[3];
+	tri->cp[0]/=tri->cp[3];
+	tri->cp[1]/=tri->cp[3];
+	tri->cp[2]/=tri->cp[3];
+	if(tri->ap[0]<tri->bp[0]){
+		if(tri->bp[0]<tri->cp[0]){
+			minX=round(tri->ap[0]);
+			maxX=round(tri->cp[0]);
+		}
+		else if(tri->ap[0]<tri->cp[0]){
+			minX=round(tri->ap[0]);
+			maxX=round(tri->bp[0]);
+		}
+		else{
+			minX=round(tri->cp[0]);
+			maxX=round(tri->bp[0]);
+		}
+	}
+	else{
+		if(tri->ap[0]<tri->cp[0]){
+			minX=round(tri->bp[0]);
+			maxX=round(tri->cp[0]);
+		}
+		else if(tri->bp[0]<tri->cp[0]){
+			minX=round(tri->bp[0]);
+			maxX=round(tri->ap[0]);
+		}
+		else{
+			minX=round(tri->cp[0]);
+			maxX=round(tri->ap[0]);
+		}
+	}
+	//find min and max y vals for bounding box
+	if(tri->ap[1]<tri->bp[1]){
+		if(tri->bp[1]<tri->cp[1]){
+			minY=round(tri->ap[1]);
+			maxY=round(tri->cp[1]);
+		}
+		else if(tri->ap[1]<tri->cp[1]){
+			minY=round(tri->ap[1]);
+			maxY=round(tri->bp[1]);
+		}
+		else{
+			minY=round(tri->cp[1]);
+			maxY=round(tri->bp[1]);
+		}
+	}
+	else{
+		if(tri->ap[1]<tri->cp[1]){
+			minY=round(tri->bp[1]);
+			maxY=round(tri->cp[1]);
+		}
+		else if(tri->bp[1]<tri->cp[1]){
+			minY=round(tri->bp[1]);
+			maxY=round(tri->ap[1]);
+		}
+		else{
+			minY=round(tri->cp[1]);
+			maxY=round(tri->ap[1]);
+		}
+	}
+	minX-=1;minY-=1;maxX+=1;maxY+=1;//make sure bounding box includes all of the triangle
+	Eigen::Vector2d v0,v1,v2,p;
+	v0<<tri->ap[0],tri->ap[1];
+	v1<<tri->bp[0],tri->bp[1];
+	v2<<tri->cp[0],tri->cp[1];
+	Eigen::Vector3d n=cross(v1-v0,v2-v0);
+	double area=n.norm();
+	double alpha,beta,gamma;
+	for(int i=minX;i<maxX;i++){
+		for(int j=minY;j<maxY;j++){
+			p<<i,j;
+			n=cross(v1-p,v2-p);
+			alpha=n.norm()/area;
+			n=cross(v0-p,v2-p);
+			beta=n.norm()/area;
+			n=cross(v1-p,v0-p);
+			gamma=n.norm()/area;
+			if(alpha>0&&beta>0&&gamma>0){
+				fragments[i*resy+j].push_back(Fragment(alpha*tri->ap[2]+beta*tri->bp[2]+gamma*tri->cp[2],alpha*tri->c0+beta*tri->c1+gamma*tri->c2));
+			}
+		}
+	}
+}
+void Renderer::render(Camera cam,int resx,int resy){
 	for(int i=0;i<triangles.size();i++){
 		vertexProcessing(triangles[i],cam);
-		rasterization();
+		rasterization(triangles[i],resy);
 	}
 }
 void Renderer::setUpM(Camera cam, double l, double r, double t, double b, double n, double resx,double resy,Eigen::Vector3d u, Eigen::Vector3d v, Eigen::Vector3d w){
@@ -359,10 +427,10 @@ void Renderer::createImage() {
 	std::cout<<"top limit: "<<t<<std::endl;
 	}
 	Camera cam;
+	fragments=new std::vector<Fragment>[res[0]*res[1]];
 	cam= createCamera(eye,at,up);
 	Renderer::setUpM(cam,l,-l,t,-t,hither,res[0],res[1],u,v,w);
-	Renderer::render(cam);
-	Renderer::blending(im);
+	Renderer::render(cam,res[0],res[1]);
 
 }
 
