@@ -32,8 +32,12 @@ Eigen::Vector4d Triangle::normal(const Eigen::Vector4d &x) const {
 	n.normalize();
 	return n;
 }
-
-Eigen::Vector4d TrianglePatch::normal(const Eigen::Vector4d &x) const {
+void Triangle::transform(Eigen::Matrix4d m){
+	ap=m*a;
+	bp=m*b;
+	cp=m*c;
+}
+Eigen::Vector4d Triangle/*Patch*/::normal(const Eigen::Vector4d &x) const {
 	Eigen::Vector4d n = cross(b-a, c-a);
 	double area = n.norm();
 	n = cross(x-a, c-a);
@@ -50,8 +54,14 @@ Eigen::Vector4d Poly::normal(const Eigen::Vector4d &x) const {
 	n.normalize();
 	return n;
 }
-Camera Camera::createCamera(Eigen::Vector3d eye, Eigen::Vector3d at,Eigen::Vector3d up){
+void Poly::transform(Eigen::Matrix4d m){
+	for(int i=0;i<verts.size();i++){
+		vertsP.push_back(m*verts[i]);
+	}
+}
+Camera createCamera(Eigen::Vector3d eye, Eigen::Vector3d at,Eigen::Vector3d up){
 	Camera cam;
+	//cam=new Camera;
 	cam.eye=eye;
 	cam.at=at;
 	cam.up=up;
@@ -116,7 +126,7 @@ Renderer::Renderer(const std::string &fname) {
 		for (unsigned int i=0; i<nverts; i++) {
 		getline(in, line);
 		std::stringstream ss(line);
-		Eigen::Vector3d v,n;
+		Eigen::Vector4d v,n;
 		if (patch){
 			ss>>v[0]>>v[1]>>v[2]>>n[0]>>n[1]>>n[2];
 			v[3]=1;
@@ -124,7 +134,7 @@ Renderer::Renderer(const std::string &fname) {
 		}
 		else{
 			ss>>v[0]>>v[1]>>v[2];
-			v[3]=0;
+			v[3]=1;
 		}
 		vertices.push_back(v);
 		if (patch) {
@@ -137,10 +147,16 @@ Renderer::Renderer(const std::string &fname) {
 		if (vertices.size() == 3) {
 			makeTriangles = true;
 		if (patch) {
-			surfaces.push_back(std::pair<Surface *, Fill>(new TrianglePatch(vertices[0], vertices[1], vertices[2], 
+			/*surfaces.push_back(std::pair<Surface *, Fill>(new Triangle(vertices[0], vertices[1], vertices[2], 
+						normals[0], normals[1], normals[2]), fill));*/
+			triangles.push_back(std::pair<Triangle *, Fill>(new Triangle(vertices[0], vertices[1], vertices[2], 
 						normals[0], normals[1], normals[2]), fill));
 		} else {
-			surfaces.push_back(std::pair<Surface *, Fill>(new Triangle(vertices[0], vertices[1], vertices[2]), fill));
+			Eigen::Vector4d n0 = cross(vertices[1] - vertices[0], vertices[2] - vertices[0]);
+			Eigen::Vector4d n1 = cross(vertices[2] - vertices[1], vertices[0] - vertices[1]);
+			Eigen::Vector4d n2 = cross(vertices[0] - vertices[2], vertices[1] - vertices[2]);
+			//surfaces.push_back(std::pair<Surface *, Fill>(new Triangle(vertices[0], vertices[1], vertices[2],n0,n1,n2), fill));
+			triangles.push_back(std::pair<Triangle *, Fill>(new Triangle(vertices[0], vertices[1], vertices[2],n0,n1,n2), fill));
 		}
 		} else if (vertices.size() == 4) {
 		Eigen::Vector3d n0 = cross(vertices[1] - vertices[0], vertices[2] - vertices[0]);
@@ -150,13 +166,19 @@ Renderer::Renderer(const std::string &fname) {
 		if (dot(n0,n1) > 0 && dot(n0,n2) > 0 && dot(n0,n3) > 0) {
 			makeTriangles = true;
 			if (patch) {
-			surfaces.push_back(std::pair<Surface *, Fill>(new TrianglePatch(vertices[0], vertices[1], vertices[2], 
+			// surfaces.push_back(std::pair<Surface *, Fill>(new Triangle(vertices[0], vertices[1], vertices[2], 
+			// 			normals[0], normals[1], normals[2]), fill));
+			// surfaces.push_back(std::pair<Surface *, Fill>(new Triangle(vertices[0], vertices[2], vertices[3], 
+			// 			normals[0], normals[2], normals[3]), fill));
+			triangles.push_back(std::pair<Triangle *, Fill>(new Triangle(vertices[0], vertices[1], vertices[2], 
 						normals[0], normals[1], normals[2]), fill));
-			surfaces.push_back(std::pair<Surface *, Fill>(new TrianglePatch(vertices[0], vertices[2], vertices[3], 
+			triangles.push_back(std::pair<Triangle *, Fill>(new Triangle(vertices[0], vertices[2], vertices[3], 
 						normals[0], normals[2], normals[3]), fill));
 			} else {
-			surfaces.push_back(std::pair<Surface *, Fill>(new Triangle(vertices[0], vertices[1], vertices[2]), fill));
-			surfaces.push_back(std::pair<Surface *, Fill>(new Triangle(vertices[0], vertices[2], vertices[3]), fill));
+			// surfaces.push_back(std::pair<Surface *, Fill>(new Triangle(vertices[0], vertices[1], vertices[2],n0,n1,n2), fill));
+			// surfaces.push_back(std::pair<Surface *, Fill>(new Triangle(vertices[0], vertices[2], vertices[3],n0,n2,n3), fill));
+			triangles.push_back(std::pair<Triangle *, Fill>(new Triangle(vertices[0], vertices[1], vertices[2],n0,n1,n2), fill));
+			triangles.push_back(std::pair<Triangle *, Fill>(new Triangle(vertices[0], vertices[2], vertices[3],n0,n2,n3), fill));
 			}
 		}
 		}
@@ -179,6 +201,7 @@ Renderer::Renderer(const std::string &fname) {
 		std::stringstream ss(line);
 		Light l;
 		ss>>ch>>l.p[0]>>l.p[1]>>l.p[2];
+		l.p[3]=1;
 		if (!ss.eof()) {
 		ss>>l.c[0]>>l.c[1]>>l.c[2];
 		coloredlights = true;
@@ -213,34 +236,15 @@ Renderer::~Renderer() {
 	for (unsigned int i=0; i<surfaces.size(); i++) delete surfaces[i].first;
 }
 
-// inline Eigen::Vector3d reflect(const Eigen::Vector3d &v, const Eigen::Vector3d &n) {
-//   return 2*dot(v,n)*n-v;
-// };
-
-// inline bool refract(const Eigen::Vector3d &v, const Eigen::Vector3d &n, double ir, Eigen::Vector3d &r) {
-//   double tmp = 1.0 - (1.0 - sqr(dot(v,n))) / sqr(ir);
-//   if (tmp < 0.0) return false;
-//   r =  (n * dot(v,n) - v) / ir  -  sqrt(tmp) * n;
-//   return true;
-// }
-
 Eigen::Vector3d Renderer::shade(const HitRecord &hr) const {
 	if (color) return hr.f.color;
 	Eigen::Vector3d color(0.0,0.0,0.0);
 	HitRecord dummy;
 	for (unsigned int i=0; i<lights.size(); i++) {
 	const Light &light = lights[i];
-	//Ray r(hr.p, light.p-hr.p);
+
 	bool shadow = false;
-	// if (shadows) {
-	// 	for (unsigned int k=0; k<surfaces.size() && !shadow; k++) {
-	// 	if (surfaces[k].first->intersect(r, shadowbias, 1.0, dummy)) {
-	// 		shadow = true;
-	// 	}
-	// 	}
-	// }
 	if (!shadow) {
-		//if (true) {
 		Eigen::Vector3d l = light.p - hr.p;
 		l.normalize();
 		Eigen::Vector3d h = l + hr.v;
@@ -254,22 +258,80 @@ Eigen::Vector3d Renderer::shade(const HitRecord &hr) const {
 		color += c;
 	}
 	}
-//   if (reflections && hr.f.ks > 0 && hr.raydepth < maxraydepth) {
-// 	color += hr.f.ks*castRay(Ray(hr.p, reflect(hr.v, hr.n), hr.raydepth+1), shadowbias, MAX);
-//   }
-//   if (hr.f.transmittance > 0 && hr.raydepth < maxraydepth) {
-// 	Eigen::Vector3d rd;
-// 	bool entering = (dot(hr.v, hr.n) > 0);
-// 	if (refract(hr.v, entering ? hr.n : -hr.n, (entering) ? hr.f.ior : 1.0/hr.f.ior, rd)) {
-// 	  color += hr.f.transmittance * castRay(Ray(hr.p, rd, hr.raydepth+1), shadowbias, MAX);
-// 	} else {
-// 	  color += hr.f.transmittance * castRay(Ray(hr.p, reflect(hr.v, entering ? hr.n : -hr.n), hr.raydepth+1), shadowbias, MAX);
-// 	}
-//   }
 	return color;
 }
-void Renderer::render(){
-
+void Renderer::vertexProcessing(std::pair<Triangle*,Fill> s,Camera cam){
+	Triangle *tri=s.first;
+	Fill f=s.second;
+	Eigen::Vector4d v[3];
+	Eigen::Vector4d eye;
+	Eigen::Vector3d color[3];
+	color[0]<<0.0,0.0,0.0;
+	color[1]<<0.0,0.0,0.0;
+	color[2]<<0.0,0.0,0.0;
+	eye<<cam.eye,1.0;
+	v[0]= eye - tri->a;
+	v[1]= eye - tri->b;
+	v[2]= eye - tri->c;
+	v[0].normalize();
+	v[1].normalize();
+	v[2].normalize();
+	for (unsigned int i=0; i<lights.size(); i++) {
+		Light &light = lights[i];
+		Eigen::Vector4d l[3];
+		l[0]= light.p - tri->a;
+		l[1]= light.p - tri->b;
+		l[2]= light.p - tri->c;
+		l[0].normalize();
+		l[1].normalize();
+		l[2].normalize();
+		Eigen::Vector4d h[3];
+		h[0]=l[0]+v[0];
+		h[1]=l[1]+v[1];
+		h[2]=l[2]+v[2];
+		h[0].normalize();
+		h[1].normalize();
+		h[2].normalize();
+		double diffuse[3];
+		diffuse[0]= std::max(0.0, dot(tri->n1, l[0]));
+		diffuse[1]= std::max(0.0, dot(tri->n2, l[1]));
+		diffuse[2]= std::max(0.0, dot(tri->n3, l[2]));
+		double specular[3];
+		specular[0]=pow(std::max(0.0, dot(tri->n1, h[0])), f.shine);
+		specular[1]=pow(std::max(0.0, dot(tri->n2, h[1])), f.shine);
+		specular[2]=pow(std::max(0.0, dot(tri->n3, h[2])), f.shine);
+		Eigen::Vector3d c[3];
+		c[0]=(f.kd * diffuse[0] * f.color + f.ks * specular[0] * Eigen::Vector3d(1.0,1.0,1.0));
+		c[1]=(f.kd * diffuse[1] * f.color + f.ks * specular[1] * Eigen::Vector3d(1.0,1.0,1.0));
+		c[2]=(f.kd * diffuse[2] * f.color + f.ks * specular[2] * Eigen::Vector3d(1.0,1.0,1.0));
+		c[0][0] *= light.c[0], c[0][1] *= light.c[1], c[0][2] *= light.c[2];
+		c[1][0] *= light.c[0], c[1][1] *= light.c[1], c[1][2] *= light.c[2];
+		c[2][0] *= light.c[0], c[2][1] *= light.c[1], c[2][2] *= light.c[2];
+		color[0] += c[0];
+		color[1] += c[1];
+		color[2] += c[2];
+	}
+	tri->c0=color[0];
+	tri->c1=color[1];
+	tri->c2=color[2];
+}
+void Renderer::render(Camera cam){
+	for(int i=0;i<triangles.size();i++){
+		vertexProcessing(triangles[i],cam);
+		rasterization();
+	}
+}
+void Renderer::setUpM(Camera cam, double l, double r, double t, double b, double n, double resx,double resy,Eigen::Vector3d u, Eigen::Vector3d v, Eigen::Vector3d w){
+	Eigen::Matrix4d Mcam,Mvp,Mper,Morth,eyeinv;
+	double f=1000*n;
+	Mcam<<u[0],u[1],u[2],0.0,v[0],v[1],v[2],0.0,w[0],w[1],w[2],0.0,0.0,0.0,0.0,1.0;
+	eyeinv<<1.0,0.0,0.0,-cam.eye[0],0.0,1.0,0.0,-cam.eye[1],0.0,0.0,1.0,-cam.eye[2],0.0,0.0,0.0,1.0;
+	Mcam=Mcam*eyeinv;
+	Morth<<2/(r-l),0.0,0.0,-((r+l)/(r-l)),0.0,2/(t-b),0.0,-((t+b)/(t-b)),0.0,0.0,2/(n-f),-((n+f)/(n-f)),0.0,0.0,0.0,1.0;
+	Mper<<n,0.0,0.0,0.0,0.0,n,0.0,0.0,0.0,0.0,n+f,-(f*n),0.0,0.0,1.0,0.0;
+	Mper=Morth*Mper;
+	Mvp<<resx/2.0,0.0,0.0,(resx-1)/2.0,0.0,resy/2.0,0.0,(resy-1)/2.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0;
+	M=Mvp*Mper*Mcam;
 }
 void Renderer::createImage() {
 	// set up coordinate system
@@ -296,10 +358,10 @@ void Renderer::createImage() {
 	std::cout<<"left limit: "<<l<<std::endl;
 	std::cout<<"top limit: "<<t<<std::endl;
 	}
-	Camera *cam;
-	cam= Camera::createCamera(eye,at,up);
-	Renderer::setUpM();
-	Renderer::render();
+	Camera cam;
+	cam= createCamera(eye,at,up);
+	Renderer::setUpM(cam,l,-l,t,-t,hither,res[0],res[1],u,v,w);
+	Renderer::render(cam);
 	Renderer::blending(im);
 
 }
