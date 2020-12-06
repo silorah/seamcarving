@@ -1,5 +1,5 @@
 Smoothing is based on what we did in lecture(on 11/2 if it matters)
-io.cpp and io.h were provided
+io.cpp and io.h were provided and bunny.obj is from the project page
 
 smoothing takes four arguments a .obj file to be read in, a .obj file(optional) to output the smoothed model to, a stepsize to be
 used when calculating the new position of a point, and a n value which is the number of iterations the smoothing will be done.
