@@ -519,7 +519,7 @@ void Renderer::createImage() {
 	//render the image
 	Renderer::render(cam,res[0],res[1]);
 	// std::cout<<"ended render"<<std::endl;
-	delete fragments;
+	// delete fragments;
 }
 //writes the image
 void Renderer::writeImage(const std::string &fname) {
