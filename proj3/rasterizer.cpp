@@ -567,7 +567,7 @@ int main(int argc, char *argv[]) {
 	if (argc-optind != 2) {
 	std::cout<<"usage: raster input.nff output.ppm"<<std::endl;
 	for (int i=0; i<argc; i++) std::cout<<argv[i]<<std::endl;
-	exit(0);
+	exit(1);
 	}	
 
 	Renderer renderer(argv[optind++]);
