@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <cstring>
 
 class Boid{
     public:
@@ -25,13 +26,13 @@ void Animation::animate(){
     double time=0.0;
     double frameTime=-1.0;
     double distx,disty,distz,colRadius=2;
-    std::ofstream out;
-    out.open("foo.text");
-    for(int i=0;i<numBoids;i++){
-        out<<"["<<fish[i].pos[0]<<","<<fish[i].pos[1]<<","<<fish[i].pos[2]<<"] ";
-        out<<"["<<fish[i].vel[0]<<","<<fish[i].vel[1]<<","<<fish[i].vel[2]<<"]"<<std::endl;
-    }
-    out.close();
+    // std::ofstream out;
+    // out.open("foo.text");
+    // for(int i=0;i<numBoids;i++){
+    //     out<<"["<<fish[i].pos[0]<<","<<fish[i].pos[1]<<","<<fish[i].pos[2]<<"] ";
+    //     out<<"["<<fish[i].vel[0]<<","<<fish[i].vel[1]<<","<<fish[i].vel[2]<<"]"<<std::endl;
+    // }
+    // out.close();
     Eigen::Vector3d colF=Eigen::Vector3d(0,0,0),centF=Eigen::Vector3d(0,0,0),velF=Eigen::Vector3d(0,0,0);
     Boid curr,neigh;
     while(time<length){
@@ -84,28 +85,39 @@ void Animation::animate(){
     }
 }
 bool Animation::read(const std::string &fname){
-    std::ifstream in(fname.c_str(), std::ios_base::in);
+    std::ifstream in(fname, std::ios_base::in);
 	std::string line;
     std::string junk;
-    getline(in,line);
-    std::stringstream first(line);
-
-    first>>size>>radius>>numNeighbors>>mass>>collision>>centering>>velocity>>hunger>>damping>>dt>>length;
-    getline(in,line);
-    std::stringstream nf(line);
-    nf>>numBoids;
+    double x,y,z;
+    in>>size>>radius>>numNeighbors>>mass>>collision>>centering>>velocity>>hunger>>damping>>dt>>length;
+    std::cout<<size<<" "<<radius<<" "<<numNeighbors<<" "<<mass<<" "<<collision<<" "<<centering<<" "<<velocity<<" "<<hunger<<" "<<damping<<" "<<dt<<" "<<length<<std::endl;
+    in>>numBoids;
+    // numBoids=0;
     int i=0;
-    while(in){
+    getline(in,line);
+   while(in){
         getline(in,line);
         if(i<numBoids){
             std::stringstream ss(line);
-            // std::cout<<line<<std::endl;
             Eigen::Vector3d pos=Eigen::Vector3d(0.0,0.0,0.0),vel=Eigen::Vector3d(0.0,0.0,0.0);
-            ss>>junk>>pos[0]>>junk>>pos[1]>>junk>>pos[2]>>junk>>junk>>vel[0]>>junk>>vel[1]>>junk>>vel[2]>>junk;
-            // std::cout<<"["<<pos[0]<<","<<pos[1]<<","<<pos[2]<<"junk:"<<junk<<std::endl;
+            getline(ss,junk,',');
+            junk.erase(0,1);
+            pos[0]=atof(junk.c_str());
+            getline(ss,junk,',');
+            pos[1]=atof(junk.c_str());
+            getline(ss,junk,']');
+            pos[2]=atof(junk.c_str());
+            getline(ss,junk,',');
+            junk.erase(0,1);
+            vel[0]=atof(junk.c_str());
+            getline(ss,junk,',');
+            vel[1]=atof(junk.c_str());
+            getline(ss,junk,']');
+            vel[2]=atof(junk.c_str());
+            std::cout<<"i: "<<i<<"\tpos: ["<<pos[0]<<","<<pos[1]<<","<<pos[2]<<"]"<<std::endl;
             fish.push_back(Boid(pos,vel));
             i++;
-        }
+       }
     }
     xbound=.5;
     ybound=.25;
