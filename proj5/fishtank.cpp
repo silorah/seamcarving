@@ -49,23 +49,48 @@ void Animation::animate(){
                 disty=fabs(fish[j].pos[1]-fish[i].pos[1]);
                 distz=fabs(fish[j].pos[2]-fish[i].pos[2]);
                 if(j!=i&&n<numNeighbors&&(distx<=radius && disty<=radius && distz<=radius )){
-                    centF+=fish[j].pos;
+                    if(distx>0&&disty>0&&distz>0){
+                    centF[0]+=fish[j].pos[0]/(distx*distx);
+                    centF[1]+=fish[j].pos[1]/(disty*disty);
+                    centF[2]+=fish[j].pos[2]/(distz*distz);
+                    colF[0]-=(fish[j].pos[0]-fish[i].pos[0])/(distx*distx);
+                    colF[1]-=(fish[j].pos[1]-fish[i].pos[1])/(disty*disty);
+                    colF[2]-=(fish[j].pos[2]-fish[i].pos[2])/(distz*distz);
+                    }
+                    else{
+                        centF[0]+=fish[j].pos[0];
+                        centF[1]+=fish[j].pos[1];
+                        centF[2]+=fish[j].pos[2];
+                        colF[0]-=(fish[j].pos[0]-fish[i].pos[0]);
+                        colF[1]-=(fish[j].pos[1]-fish[i].pos[1]);
+                        colF[2]-=(fish[j].pos[2]-fish[i].pos[2]);
+                    
+                    }
                     velF+=fish[j].vel;
-                    colF-=fish[j].pos-fish[i].pos;
+                // fish[i].colF[0]*=sqrt(fabs(colF[0]-fish[i].pos[0]));
+                // fish[i].colF[1]*=sqrt(fabs(colF[1]-fish[i].pos[1]));
+                // fish[i].colF[2]*=sqrt(fabs(colF[2]-fish[i].pos[2]));
                     n++;
                 }
             }
+            if(n>0){
             centF/=n;
             colF/=n;
             velF/=n;
+            }
             fish[i].centF=(centF-fish[i].pos)/dt;
-            fish[i].velF=(velF-fish[i].vel)/dt;
+            fish[i].centF/=fish[i].centF.norm();
+            // fish[i].centF/=mass;
+            fish[i].velF=(velF-fish[i].vel);
+            // fish[i].velF/=mass;
             fish[i].colF=(colF-fish[i].pos)/dt;
+            
+            // fish[i].colF/=mass;
         }
         for(int i=0;i<numBoids;i++){
-            fish[i].pos[0]=fish[i].pos[0]+velF[0]*dt;
-            fish[i].pos[1]=fish[i].pos[1]+velF[1]*dt;
-            fish[i].pos[2]=fish[i].pos[2]+velF[2]*dt;
+            fish[i].pos[0]=fish[i].pos[0]+fish[i].vel[0]*dt;
+            fish[i].pos[0]=fish[i].pos[1]+fish[i].vel[1]*dt;
+            fish[i].pos[0]=fish[i].pos[2]+fish[i].vel[2]*dt;
             fish[i].vel[0]=(fish[i].vel[0])+(fish[i].velF[0]*velocity)+(fish[i].colF[0]*collision)+(fish[i].centF[0]*centering);
             fish[i].vel[1]=(fish[i].vel[1])+(fish[i].velF[1]*velocity)+(fish[i].colF[1]*collision)+(fish[i].centF[1]*centering);
             fish[i].vel[2]=(fish[i].vel[2])+(fish[i].velF[2]*velocity)+(fish[i].colF[2]*collision)+(fish[i].centF[2]*centering);
