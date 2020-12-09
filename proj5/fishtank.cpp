@@ -114,6 +114,9 @@ bool Animation::read(const std::string &fname){
 	std::string line;
     std::string junk;
     double x,y,z;
+    if(!in.is_open()){
+        return false;
+    }
     //fill in the animation constraints
     in>>size>>radius>>numNeighbors>>mass>>collision>>centering>>velocity>>hunger>>damping>>dt>>length;
     // std::cout<<size<<" "<<radius<<" "<<numNeighbors<<" "<<mass<<" "<<collision<<" "<<centering<<" "<<velocity<<" "<<hunger<<" "<<damping<<" "<<dt<<" "<<length<<std::endl;
