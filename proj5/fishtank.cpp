@@ -7,9 +7,11 @@
 class Boid{
     public:
     Boid(){};
-    Boid(const Eigen::Vector3d &_pos,const Eigen::Vector3d &_vel):pos(_pos),vel(_vel){};
+    Boid(const Eigen::Vector3d &_pos,const Eigen::Vector3d &_vel,double _mass):pos(_pos),vel(_vel),mass(_mass){};
     ~Boid(){};
-    Eigen::Vector3d pos,vel,colF,centF,velF;//position,velocity,collision avoidance force, centering force,
+    double mass;
+    Eigen::Vector3d pos,vel;//position,velocity
+    Eigen::Vector3d netForce;//the net force acting on the boid calculated by mass*( collision*(colF/dt)+centering*(centF/dt)+velocity*(velF/dt)+vel/dt)
 };
 class Animation{
     public:
@@ -25,7 +27,7 @@ void Animation::animate(){
     int frame=0,n=0;//n is number of neighbors considered
     double time=0.0;
     double frameTime=-1.0;
-    double distx,disty,distz,colRadius=2;
+    double distx,disty,distz,m;
     // std::ofstream out;
     // out.open("foo.text");
     // for(int i=0;i<numBoids;i++){
@@ -33,7 +35,7 @@ void Animation::animate(){
     //     out<<"["<<fish[i].vel[0]<<","<<fish[i].vel[1]<<","<<fish[i].vel[2]<<"]"<<std::endl;
     // }
     // out.close();
-    Eigen::Vector3d colF=Eigen::Vector3d(0,0,0),centF=Eigen::Vector3d(0,0,0),velF=Eigen::Vector3d(0,0,0);
+    Eigen::Vector3d avgPos=Eigen::Vector3d(0,0,0),avgVel=Eigen::Vector3d(0,0,0),colForce=Eigen::Vector3d(0,0,0);
     Boid curr,neigh;
     while(time<length){
         if(frameTime<0){
@@ -42,31 +44,43 @@ void Animation::animate(){
             frame++;
         }
         for(int i=0;i<numBoids;i++){
-            colF=Eigen::Vector3d(0,0,0),centF=Eigen::Vector3d(0,0,0),velF=Eigen::Vector3d(0,0,0);
+            fish[i].netForce=Eigen::Vector3d(0,0,0),avgPos=Eigen::Vector3d(0,0,0),avgVel=Eigen::Vector3d(0,0,0),colForce=Eigen::Vector3d(0,0,0);
             n=0;
             for(int j=0;j<numBoids;j++){
                 distx=fabs(fish[j].pos[0]-fish[i].pos[0]);
                 disty=fabs(fish[j].pos[1]-fish[i].pos[1]);
                 distz=fabs(fish[j].pos[2]-fish[i].pos[2]);
                 if(j!=i&&n<numNeighbors&&(distx<=radius && disty<=radius && distz<=radius )){
-                    if(distx>0&&disty>0&&distz>0){
-                    centF[0]+=fish[j].pos[0]/(distx*distx);
-                    centF[1]+=fish[j].pos[1]/(disty*disty);
-                    centF[2]+=fish[j].pos[2]/(distz*distz);
-                    colF[0]-=(fish[j].pos[0]-fish[i].pos[0])/(distx*distx);
-                    colF[1]-=(fish[j].pos[1]-fish[i].pos[1])/(disty*disty);
-                    colF[2]-=(fish[j].pos[2]-fish[i].pos[2])/(distz*distz);
-                    }
-                    else{
-                        centF[0]+=fish[j].pos[0];
-                        centF[1]+=fish[j].pos[1];
-                        centF[2]+=fish[j].pos[2];
-                        colF[0]-=(fish[j].pos[0]-fish[i].pos[0]);
-                        colF[1]-=(fish[j].pos[1]-fish[i].pos[1]);
-                        colF[2]-=(fish[j].pos[2]-fish[i].pos[2]);
+                    // if(distx>0&&disty>0&&distz>0){
+                    //     // centF[0]+=fish[j].pos[0]/(distx*distx);
+                    //     // centF[1]+=fish[j].pos[1]/(disty*disty);
+                    //     // centF[2]+=fish[j].pos[2]/(distz*distz);
+                    //     // colF[0]-=((fish[j].pos[0]-fish[i].pos[0])/(distx*distx));
+                    //     // colF[1]-=((fish[j].pos[1]-fish[i].pos[1])/(disty*disty));
+                    //     // colF[2]-=((fish[j].pos[2]-fish[i].pos[2])/(distz*distz));
+                    //     centF[0]+=(fish[j].pos[0]-fish[i].pos[0]);
+                    //     centF[1]+=(fish[j].pos[0]-fish[i].pos[1]);
+                    //     centF[2]+=(fish[j].pos[0]-fish[i].pos[2]);
+                    //     colF[0]-=(fish[j].pos[0]-fish[i].pos[0]);
+                    //     colF[1]-=(fish[j].pos[1]-fish[i].pos[1]);
+                    //     colF[2]-=(fish[j].pos[2]-fish[i].pos[2]);
+                    // }
+                    // else{                        
+                    //     centF[0]+=(fish[j].pos[0]-fish[i].pos[0]);
+                    //     centF[1]+=(fish[j].pos[0]-fish[i].pos[1]);
+                    //     centF[2]+=(fish[j].pos[0]-fish[i].pos[2]);
+                    //     colF[0]-=(fish[j].pos[0]-fish[i].pos[0]);
+                    //     colF[1]-=(fish[j].pos[1]-fish[i].pos[1]);
+                    //     colF[2]-=(fish[j].pos[2]-fish[i].pos[2]);
                     
+                    // }
+                    colForce=fish[i].pos-fish[j].pos;
+                    m=colForce.norm();
+                    if(m>.0001){
+                        fish[i].netForce+=(collision*colForce)/(m*m*m);
                     }
-                    velF+=fish[j].vel;
+                    avgPos+=fish[j].pos;
+                    avgVel+=fish[j].vel;
                 // fish[i].colF[0]*=sqrt(fabs(colF[0]-fish[i].pos[0]));
                 // fish[i].colF[1]*=sqrt(fabs(colF[1]-fish[i].pos[1]));
                 // fish[i].colF[2]*=sqrt(fabs(colF[2]-fish[i].pos[2]));
@@ -74,36 +88,79 @@ void Animation::animate(){
                 }
             }
             if(n>0){
-            centF/=n;
-            colF/=n;
-            velF/=n;
+                // centF=(centF-fish[i].pos)/dt;
+                // velF=(velF-fish[i].vel);
+                // colF=(colF-fish[i].pos)/dt;
+                // centF=fish[i].mass*(centF/dt);
+                // colF=fish[i].mass*(colF/dt);
+                // velF=fish[i].mass*(velF/dt);
+                // centF/=n;
+                // colF/=n;
+                // velF/=n;
+                // centF/=centF.norm();
+                avgPos/=n;
+                avgVel/=n;
+                m=(avgPos-fish[i].pos).norm();
+                if(m>.0001){
+                    fish[i].netForce+=(centering*(avgPos-fish[i].pos))/m;
+                }
+                fish[i].netForce+=velocity*(avgVel-fish[i].vel);
             }
-            fish[i].centF=(centF-fish[i].pos)/dt;
-            fish[i].centF/=fish[i].centF.norm();
-            // fish[i].centF/=mass;
-            fish[i].velF=(velF-fish[i].vel);
-            // fish[i].velF/=mass;
-            fish[i].colF=(colF-fish[i].pos)/dt;
-            
-            // fish[i].colF/=mass;
+            else{
+                // fish[i].colF=Eigen::Vector3d(0.0,0.0,0.0);
+                // fish[i].centF=Eigen::Vector3d(0.0,0.0,0.0);
+                // fish[i].velF=Eigen::Vector3d(0.0,0.0,0.0);
+            }
+            // fish[i].netForce=centering*avgPos+velocity*avgVel;
         }
         for(int i=0;i<numBoids;i++){
-            fish[i].pos[0]=fish[i].pos[0]+fish[i].vel[0]*dt;
-            fish[i].pos[0]=fish[i].pos[1]+fish[i].vel[1]*dt;
-            fish[i].pos[0]=fish[i].pos[2]+fish[i].vel[2]*dt;
-            fish[i].vel[0]=(fish[i].vel[0])+(fish[i].velF[0]*velocity)+(fish[i].colF[0]*collision)+(fish[i].centF[0]*centering);
-            fish[i].vel[1]=(fish[i].vel[1])+(fish[i].velF[1]*velocity)+(fish[i].colF[1]*collision)+(fish[i].centF[1]*centering);
-            fish[i].vel[2]=(fish[i].vel[2])+(fish[i].velF[2]*velocity)+(fish[i].colF[2]*collision)+(fish[i].centF[2]*centering);
-            if(fabs(fish[i].pos[0])>=xbound){
-                fish[i].vel[0]*=-1;
-            }
-            if(fabs(fish[i].pos[1])>=ybound){
-                fish[i].vel[1]*=-1;
-            }
-            if(fabs(fish[i].pos[2])>=zbound){
-                fish[i].vel[2]*=-1;
-            }
+            fish[i].vel+=dt*(fish[i].netForce/fish[i].mass);
             fish[i].vel*=damping;
+            fish[i].pos+=fish[i].vel*dt;
+            if(fish[i].pos[0]<=-xbound){
+                fish[i].pos[0]=-xbound;
+                fish[i].vel[0]=fabs(fish[i].vel[0]);
+            }
+            if(fish[i].pos[0]>=xbound){
+                fish[i].pos[0]=xbound;
+                fish[i].vel[0]=-fabs(fish[i].vel[0]);
+            }
+            if(fish[i].pos[1]<=-ybound){
+                fish[i].pos[1]=-ybound;
+                fish[i].vel[1]=fabs(fish[i].vel[1]);
+            }
+            if(fish[i].pos[1]>=ybound){
+                fish[i].pos[1]=ybound;
+                fish[i].vel[1]=-fabs(fish[i].vel[1]);
+            }
+            if(fish[i].pos[2]<=-zbound){
+                fish[i].pos[2]=-zbound;
+                fish[i].vel[2]=fabs(fish[i].vel[2]);
+            }
+            if(fish[i].pos[2]>=zbound){
+                fish[i].pos[2]=zbound;
+                fish[i].vel[2]=-fabs(fish[i].vel[2]);
+            }
+            // if(fabs(fish[i].pos[0])>=xbound){
+            //     fish[i].vel[0]*=-1;
+            // }
+            // if(fabs(fish[i].pos[1])>=ybound){
+            //     fish[i].vel[1]*=-1;
+            // }
+            // if(fabs(fish[i].pos[2])>=zbound){
+            //     fish[i].vel[2]*=-1;
+            // }
+            // if(fabs(fish[i].pos[0])>=xbound||fabs(fish[i].pos[1])>=ybound||fabs(fish[i].pos[2])>=zbound){
+            //     fish[i].vel*=-1;
+            // }
+            // fish[i].pos[0]=fish[i].pos[0]+fish[i].vel[0]*dt+(((fish[i].netForce[0]/mass)*(dt*dt))/2);
+            // fish[i].pos[0]=fish[i].pos[1]+fish[i].vel[1]*dt+(((fish[i].netForce[1]/mass)*(dt*dt))/2);
+            // fish[i].pos[0]=fish[i].pos[2]+fish[i].vel[2]*dt+(((fish[i].netForce[2]/mass)*(dt*dt))/2);
+            // // fish[i].vel[0]=(fish[i].vel[0])+(fish[i].velF[0]*velocity)+(fish[i].colF[0]*collision)+(fish[i].centF[0]*centering);
+            // // fish[i].vel[1]=(fish[i].vel[1])+(fish[i].velF[1]*velocity)+(fish[i].colF[1]*collision)+(fish[i].centF[1]*centering);
+            // // fish[i].vel[2]=(fish[i].vel[2])+(fish[i].velF[2]*velocity)+(fish[i].colF[2]*collision)+(fish[i].centF[2]*centering);
+            // fish[i].vel-=((fish[i].netForce/fish[i].mass)*dt);
+            // fish[i].vel*=damping;
         }
         time+=dt;
         frameTime-=dt;
@@ -140,7 +197,7 @@ bool Animation::read(const std::string &fname){
             getline(ss,junk,']');
             vel[2]=atof(junk.c_str());
             std::cout<<"i: "<<i<<"\tpos: ["<<pos[0]<<","<<pos[1]<<","<<pos[2]<<"]"<<std::endl;
-            fish.push_back(Boid(pos,vel));
+            fish.push_back(Boid(pos,vel,mass));
             i++;
        }
     }
