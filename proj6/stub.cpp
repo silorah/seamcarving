@@ -61,10 +61,39 @@ void computeCost(Eigen::Vector3d *energy,Eigen::Vector3d *cost,int width,int hei
 }
 void calcCost(double *energy,double *cost,int width,int height){
 	double c;
-	for (unsigned int i=0; i<height; i++) {
-		for (unsigned int j=0; j<width; j++) {
-			c=energy[i*width+j];
-			if(i==0){}
+	// for (unsigned int i=0; i<width; i++) {
+	// 	for (unsigned int j=0; j<height; j++) {
+	// 		c=energy[i*height+j];
+	// 		if(i!=0){
+	// 			if(j!=0&&j!=height-1){
+	// 				c+=std::min({cost[(i-1)*height+j-1],cost[(i-1)*height+j],cost[(i-1)*height+j+1]});
+	// 			}
+	// 			else if(j==0){
+	// 				c+=std::min({cost[(i-1)*height+j],cost[(i-1)*height+j+1]});
+	// 			}
+	// 			else{
+	// 				c+=std::min({cost[(i-1)*height+j-1],cost[(i-1)*height+j]});
+	// 			}
+	// 		}
+	// 		cost[i*height+j]=c;
+	// 	}
+	// }
+	for(int j=height-1;j>=0;j--){
+		// std::cout<<"J "<<j<<std::endl;
+		for (unsigned int i=0; i<width; i++) {
+			c=energy[i*height+j];
+			if(j<height-1){
+				if(i!=0&&i!=width-1){
+					c+=std::min({cost[i*height+j+1],cost[(i-1)*height+j+1],cost[(i+1)*height+j+1]});
+				}
+				else if(i==0){
+					c+=std::min(cost[i*height+j+1],cost[(i+1)*height+j+1]);
+				}
+				else{
+					c+=std::min(cost[i*height+j+1],cost[(i-1)*height+j+1]);
+				}
+			}
+			cost[i*height+j]=c;
 		}
 	}
 }
@@ -121,6 +150,106 @@ void energyCalc(Eigen::Vector3d *energy,double *e,Eigen::Vector3d *image,int wid
 		}
 	}
 }
+void findSeam(std::vector<int> &seam,double *cost,int width,int height){
+	double min_cost=DBL_MAX;
+	int index,u,d,m;
+	// for(int i=width-1;i>=0;i--){
+	// 	min_cost=DBL_MAX;
+	// 	index=0;
+	// 	for(int j=height-1;j>=0;j--){
+	// 		if(min_cost>cost[i*height+j]&&(i==width-1||((i*height+j==l&&j!=0)||i*height+j==m||(i*height+j==r&&j!=height-1)))){
+	// 			min_cost=cost[i*height+j];
+	// 			index=i*height+j;
+	// 			l=(i-1)*height+j-1;
+	// 			m=(i-1)*height+j;
+	// 			r=(i-1)*height+j+1;
+	// 			// std::cout<<"big if true"<<std::endl;
+	// 		}
+	// 	}
+	// 	// std::cout<<"i"<<i<<"\tindex\t"<<index<<std::endl;
+	// 	seam.push_back(index);
+	// }
+	// for(unsigned int i=0;i<width;i++){
+	// 	if(min_cost>cost[i*height]){
+	// 		min_cost=cost[i*height];
+	// 		index=i;
+	// 	}
+	// }
+	// std::cout<<"Seam min"<<index<<std::endl;
+	// seam.push_back(index*height);
+	// int min;
+	// for(int j=1;j<height;j++){
+	// 	m=index*height+j;
+	// 	if(index!=0&&index!=width){
+	// 		u=(index-1)*height+j;
+	// 		d=(index+1)*height+j;
+	// 		min=std::min({u,m,d});
+	// 		if(min==u){
+	// 			index-=1;
+	// 		}
+	// 		else if(min==d){
+	// 			index+=1;
+	// 		}
+	// 		seam.push_back(min);
+	// 	}
+	// 	else if(index==0){
+	// 		d=(index+1)*height+j;
+	// 		min=std::min(m,d);
+	// 		seam.push_back(min);
+	// 		if(min==d){
+	// 			index+=1;
+	// 		}
+			
+	// 	}
+	// 	else{
+	// 		u=(index-1)*height+j;
+	// 		min=std::min(m,u);
+	// 		seam.push_back(min);
+	// 		if(min==u){
+	// 			index-=1;
+	// 		}
+	// 	}
+	// }
+	for(int i=0;i<height;i++){
+		if(min_cost>cost[(width-1)*height+i]){
+			min_cost=cost[(width-1)*height+i];
+			index=i;
+		}
+	}
+	int min;
+	seam.push_back((width-1)*height+index);
+	for(int i=width-2;i>=0;i--){
+		m=i*height+index;
+		if(index!=0&&index!=height-1){
+			u=i*height+index-1;
+			d=i*height+index+1;
+			min=std::min({cost[u],cost[d],cost[m]});
+			if(min==cost[u]){
+				// std::cout<<"UP"<<std::endl;
+				index-=1;
+			}
+			else if(min==cost[d]){
+				// std::cout<<"DOWN"<<std::endl;
+				index+=1;
+			}
+		}
+		else if(index==height-1){
+			u=i*height+index-1;
+			min=std::min({cost[u],cost[m]});
+			if(min==cost[u]){
+				index-=1;
+			}
+		}
+		else{
+			d=i*height+index+1;
+			min=std::min(cost[d],cost[m]);
+			if(min==cost[d]){
+				index+=1;
+			}
+		}
+		seam.push_back(i*height+index);
+	}
+}
 int main(int argc, char *argv[]) {
 	CImg<double> input(argv[1]);
 	CImg<double> lab = input.RGBtoLab();
@@ -172,61 +301,59 @@ int main(int argc, char *argv[]) {
 	std::cout<<"starting shrink"<<std::endl;
 	bool done=false;
 	int height=input.height(),width=input.width();
-	Eigen::Vector3d *cost= new Eigen::Vector3d[input.width()*input.height()];
+	double *cost= new double[input.width()*input.height()];
 	std::vector<int> vseam;
 	int index,l,r,m;
 	double min_cost;
+	bool next=true;
 	while(!done){
 		std::cout<<width<<std::endl;
 		if(width>atoi(argv[3])){
 			energyCalc(energy,eng,image,width,height);
 			std::cout<<"Compute Cost"<<std::endl;
-			computeCost(energy,cost,width,height);
+			calcCost(eng,cost,width,height);
 			std::cout<<"Cost computed"<<std::endl;
-			for(int i=width-1;i>=0;i--){
-				min_cost=DBL_MAX;
-				index=0;
-				for(int j=height-1;j>=0;j--){
-					if((min_cost>cost[i*height+j].norm())&&(i==width-1||(i*height+j==l||i*height+j==m||i*height+j==r))){
-						min_cost=cost[i*height+j].norm();
-						index=i*height+j;
-						l=(i-1)*height+j-1;
-						m=(i-1)*height+j;
-						r=(i-1)*height+j+1;
-						// std::cout<<"big if true"<<std::endl;
-					}
-				}
-				// std::cout<<"i"<<i<<"\tindex\t"<<index<<std::endl;
-				vseam.push_back(index);
-			}
-			std::cout<<"seam created\tseam size"<<vseam.size()<<" "<<vseam[0]<<std::endl;
+			findSeam(vseam,cost,width,height);
+			double max=vseam[0];
+			std::cout<<"seam created\tseam size"<<vseam.size()<<" "<<vseam[0]<<" "<<vseam[vseam.size()-1]<<std::endl;
 			Eigen::Vector3d *temp;
 			temp=image;
-			image=new Eigen::Vector3d[(width)*height];
+			image=new Eigen::Vector3d[(width)*(height)];
 			for(int i=0;i<input.width();i++){
-				index=vseam[vseam.size()-1];
-				vseam.pop_back();
+				if(!vseam.empty()&&next){
+					index=vseam[vseam.size()-1];
+					vseam.pop_back();
+					next=false;
+				}
 				// if(i==0) std::cout<<index<<std::endl;
 				for(int j=0;j<height;j++){
 					if(index!=i*height+j){
 						image[i*height+j]=temp[i*height+j];
 					}
 					else{
-						// std::cout<<index<<std::endl;
+					// 	// std::cout<<index<<std::endl;
+						/*if(index==max){*/ std::cout<<index<<" NANI!!!!!"<<std::endl;
 						image[i*height+j]=Eigen::Vector3d(53.23,80.11,67.22);
+						next=true;
 					}
 				}
 			}
 			std::cout<<"seam removed"<<std::endl;
 			delete [] temp;
+			delete[] energy;
+			delete[] eng;
+			delete[] cost;
 			width--;
+			energy=new Eigen::Vector3d[(width)*height];
+			eng=new double[(width)*height];
+			cost=new double[(width)*height];
 		}
 		if(width==atoi(argv[3])&&height==atoi(argv[4])){
 			done=true;
 		}
 	}
 	//begin seam finding
-	CImg<double> output(input.width(), input.height(), input.depth(), input.spectrum(), 0);
+	CImg<double> output(input.width(), atoi(argv[4]), input.depth(), input.spectrum(), 0);
 	for (unsigned int i=0; i<output.width(); i++) {
 		// std::cout<<"i"<<i<<std::endl;
 		for (unsigned int j=0; j<output.height(); j++) {
