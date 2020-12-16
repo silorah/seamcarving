@@ -4,80 +4,8 @@
 #include <vector>
 #include <Eigen/Dense>
 using namespace cimg_library;
-Eigen::Vector3d min(Eigen::Vector3d a,Eigen::Vector3d b,Eigen::Vector3d c){
-	Eigen::Vector3d min;
-	if (a[0]<b[0]&&a[0]<c[0]) min[0]=a[0];
-	if (a[1]<b[1]&&a[1]<c[1]) min[1]=a[1];
-	return a;
-}
-void computeCost(Eigen::Vector3d *energy,Eigen::Vector3d *cost,int width,int height){
-	int row;
-	for(unsigned int i=0;i<width;i++){
-		for(unsigned int j=0;j<height;j++){
-			if(i==0){
-				cost[i*height+j]=energy[i*height+j];
-			}
-			else{
-				row=(i-1)*height;
-				if(j!=0||j!=height-1){
-					cost[i*height+j]=energy[i*height+j];
-					if(cost[row+(j-1)].norm()<cost[row+j].norm()){
-						if(cost[row+(j-1)].norm()<cost[row+(j+1)].norm()){
-							cost[i*height+j]+=cost[row+(j-1)];
-						}
-						else{
-							cost[i*height+j]+=cost[row+(j+1)];
-						}
-					}
-					else if(cost[row+j].norm()<cost[row+(j+1)].norm()){
-						cost[i*height+j]+=cost[row+j];
-					}
-					else{
-						cost[i*height+j]+=cost[row+(j+1)];
-					}
-					// cost[i*height+j]+=min(cost[row+j],cost[row+j-1],cost[row+j+1]);
-				}
-				else if(j==0){
-					// cost[i*height+j]+=min(cost[row+j],cost[row+j+1]);
-					if(cost[row+j].norm()<cost[row+j+1].norm()){
-						cost[i*height+j]+=cost[row+j];
-					}
-					else{
-						cost[i*height+j]+=cost[row+j+1];
-					}
-				}
-				else{
-					// cost[i*height+j]+=min(cost[row+j],cost[row+j-1]);
-					if(cost[row+j].norm()<cost[row+j-1].norm()){
-						cost[i*height+j]+=cost[row+j];
-					}
-					else{
-						cost[i*height+j]+=cost[row+j-1];
-					}
-				}
-			}
-		}
-	}
-}
 void calcCost(double *energy,double *cost,int width,int height){
 	double c;
-	// for (unsigned int i=0; i<width; i++) {
-	// 	for (unsigned int j=0; j<height; j++) {
-	// 		c=energy[i*height+j];
-	// 		if(i!=0){
-	// 			if(j!=0&&j!=height-1){
-	// 				c+=std::min({cost[(i-1)*height+j-1],cost[(i-1)*height+j],cost[(i-1)*height+j+1]});
-	// 			}
-	// 			else if(j==0){
-	// 				c+=std::min({cost[(i-1)*height+j],cost[(i-1)*height+j+1]});
-	// 			}
-	// 			else{
-	// 				c+=std::min({cost[(i-1)*height+j-1],cost[(i-1)*height+j]});
-	// 			}
-	// 		}
-	// 		cost[i*height+j]=c;
-	// 	}
-	// }
 	for(int j=height-1;j>=0;j--){
 		// std::cout<<"J "<<j<<std::endl;
 		for (unsigned int i=0; i<width; i++) {
@@ -167,72 +95,15 @@ void transPose(Eigen::Vector3d *&img,double *&cost,int width,int height){
 void findSeam(std::vector<int> &seam,double *cost,int width,int height){
 	double min_cost=DBL_MAX;
 	int index,u,d,m;
-	// for(int i=width-1;i>=0;i--){
-	// 	min_cost=DBL_MAX;
-	// 	index=0;
-	// 	for(int j=height-1;j>=0;j--){
-	// 		if(min_cost>cost[i*height+j]&&(i==width-1||((i*height+j==l&&j!=0)||i*height+j==m||(i*height+j==r&&j!=height-1)))){
-	// 			min_cost=cost[i*height+j];
-	// 			index=i*height+j;
-	// 			l=(i-1)*height+j-1;
-	// 			m=(i-1)*height+j;
-	// 			r=(i-1)*height+j+1;
-	// 			// std::cout<<"big if true"<<std::endl;
-	// 		}
-	// 	}
-	// 	// std::cout<<"i"<<i<<"\tindex\t"<<index<<std::endl;
-	// 	seam.push_back(index);
-	// }
-	// for(unsigned int i=0;i<width;i++){
-	// 	if(min_cost>cost[i*height]){
-	// 		min_cost=cost[i*height];
-	// 		index=i;
-	// 	}
-	// }
-	// std::cout<<"Seam min"<<index<<std::endl;
-	// seam.push_back(index*height);
-	// int min;
-	// for(int j=1;j<height;j++){
-	// 	m=index*height+j;
-	// 	if(index!=0&&index!=width){
-	// 		u=(index-1)*height+j;
-	// 		d=(index+1)*height+j;
-	// 		min=std::min({u,m,d});
-	// 		if(min==u){
-	// 			index-=1;
-	// 		}
-	// 		else if(min==d){
-	// 			index+=1;
-	// 		}
-	// 		seam.push_back(min);
-	// 	}
-	// 	else if(index==0){
-	// 		d=(index+1)*height+j;
-	// 		min=std::min(m,d);
-	// 		seam.push_back(min);
-	// 		if(min==d){
-	// 			index+=1;
-	// 		}
-			
-	// 	}
-	// 	else{
-	// 		u=(index-1)*height+j;
-	// 		min=std::min(m,u);
-	// 		seam.push_back(min);
-	// 		if(min==u){
-	// 			index-=1;
-	// 		}
-	// 	}
-	// }
 	for(int i=0;i<width;i++){
-		if(min_cost>cost[i*height]){
+		if(min_cost>=cost[i*height]){
 			min_cost=cost[i*height];
 			index=i;
 		}
 	}
-	std::cout<<"push_back"<<std::endl;
+	// std::cout<<cost[0]<<" push_back "<<min_cost<<std::endl;
 	double min;
-	seam.push_back(index*height);
+	seam.push_back(index);
 	for(int i=1;i<height;i++){
 		m=index*height+i;
 		if(index!=0&&index!=width-1){
@@ -263,9 +134,9 @@ void findSeam(std::vector<int> &seam,double *cost,int width,int height){
 				index+=1;
 			}
 		}
-		seam.push_back(index*height+i);
+		seam.push_back(index);
 	}
-	std::cout<<"end"<<std::endl;
+	// std::cout<<"end"<<std::endl;
 }
 int main(int argc, char *argv[]) {
 	CImg<double> input(argv[1]);
@@ -315,7 +186,7 @@ int main(int argc, char *argv[]) {
 	//convert greyScale to RGB, save to grey.jpg
 	CImg<double> greyImg=greyScale.LabtoRGB();
 	greyImg.save_jpeg("grey.jpg");
-	std::cout<<"starting shrink"<<std::endl;
+	// std::cout<<"starting shrink"<<std::endl;
 	bool done=false;
 	int height=input.height(),width=input.width();
 	double *cost= new double[input.width()*input.height()];
@@ -323,118 +194,81 @@ int main(int argc, char *argv[]) {
 	int index,l,r,m;
 	double min_cost;
 	bool next=true,removed=false;
+	//seam removal
 	while(!done){
-		std::cout<<width<<std::endl;
+		// std::cout<<width<<std::endl;
 		if(height>atoi(argv[4])){
-			std::cout<<"Shrink Width"<<std::endl;
+			// std::cout<<"Shrink Width"<<std::endl;
 			energyCalc(energy,eng,image,width,height);
-			std::cout<<"Compute Cost"<<std::endl;
+			// std::cout<<"Compute Cost"<<std::endl;
 			calcCost(eng,cost,width,height);
-			std::cout<<"Cost computed"<<std::endl;
+			// std::cout<<"Cost computed"<<std::endl;
 			transPose(image,cost,width,height);
-			std::cout<<"transposed"<<std::endl;
+			// std::cout<<"transposed"<<std::endl;
 			findSeam(seam,cost,height,width);
 			double max=seam[0];
-			std::cout<<"seam created\tseam size"<<seam.size()<<" "<<seam[0]<<" "<<seam[seam.size()-1]<<std::endl;
+			// std::cout<<"seam created\tseam size"<<seam.size()<<" "<<seam[0]<<" "<<seam[seam.size()-1]<<std::endl;
 			Eigen::Vector3d *temp;
 			std::sort(seam.begin(),seam.end());
 			temp=image;
 			image=new Eigen::Vector3d[(width)*(height)];
-			int k=0;
-			for(int i=0;i<height;i++){
-				
-				// if(i==0) std::cout<<index<<std::endl;
-				for(int j=0;j<width;j++){
-					if(k!=seam.size()&&next){
-						index=seam[k];
-					// seam.pop_back();
-						next=false;
-						k++;
-					}
-					if(index!=i*width+j&&!removed){
-						image[i*width+j]=temp[i*width+j];
-					}
-					// else if(removed&&j!=width-1){
-					// 	image[i*width+j]=temp[i*width+1+j];
-					// }
-					// else if(j!=width-1){
-					// // 	// std::cout<<index<<std::endl;
-					// 	image[i*width+j]=temp[i*width+1+j];
-					// 	next=true;
-					// 	removed=true;
-					// }
-					else{
-						std::cout<<"WTF"<<index<<std::endl;
-						image[i*width+j]=Eigen::Vector3d(53.23,80.11,67.22);
-						next=true;
-					}
+			for(int i=0;i<seam.size();i++){
+				for(int j=0;j<seam[i];j++){
+					image[j*width+i]=temp[j*width+i];
+					
+				}
+				for(int j=seam[i];j<height-1;j++){
+					image[j*width+i]=temp[(j+1)*width+i];					
 				}
 			}
-			std::cout<<"seam removed"<<std::endl;
-			transPose(image,cost,height,width);
+			
+			// std::cout<<"seam removed"<<std::endl;
+			transPose(image,cost,height-1,width);
 			height-=1;
 			delete [] temp;
+			temp=image;
+			image=new Eigen::Vector3d[height*width];
+			for(int i=0;i<width;i++){
+				for(int j=0;j<height;j++){
+					image[i*height+j]=temp[i*height+j];
+				}
+			}
 			delete[] energy;
 			delete[] eng;
 			delete[] cost;
+			delete[] temp;
 			energy=new Eigen::Vector3d[(width)*height];
 			eng=new double[(width)*height];
+			seam.clear();
 			cost=new double[(width)*height];
 		}
 		next=true;
 		removed=false;
 		if(width>atoi(argv[3])){
 			energyCalc(energy,eng,image,width,height);
-			std::cout<<"Compute Cost"<<std::endl;
+			// std::cout<<"Compute Cost"<<std::endl;
 			calcCost(eng,cost,width,height);
-			std::cout<<"Cost computed"<<std::endl;
+			// std::cout<<"Cost computed"<<std::endl;
 			findSeam(seam,cost,width,height);
 			double max=seam[0];
-			std::cout<<"seam created\tseam size"<<seam.size()<<" "<<seam[0]<<" "<<seam[1]<<" "<<seam[2]<<std::endl;
+			// std::cout<<"seam created\tseam size"<<seam.size()<<" "<<seam[0]<<" "<<seam[1]<<" "<<seam[2]<<std::endl;
 			Eigen::Vector3d *temp;
 			std::sort(seam.begin(),seam.end());
 			temp=image;
-			image=new Eigen::Vector3d[(width)*(height)];
-			int k=0;
-			for(int i=0;i<width;i++){
-				
-				// if(i==0) std::cout<<index<<std::endl;
-				for(int j=0;j<height;j++){
-					if(k!=seam.size()&&next){
-						index=seam[k];
-					// seam.pop_back();
-						next=false;
-						k++;
-					}
-					if(index!=i*height+j){
-						image[i*height+j]=temp[i*height+j];
-					}
-					// else if(removed&&j!=height-1){
-					// 	image[i*height+j]=temp[i*height+1+j];
-					// }
-					// else if(j!=height-1){
-					// // 	// std::cout<<index<<std::endl;
-					// 	image[i*height+j]=temp[i*height+1+j];
-					// 	next=true;
-					// 	removed=true;;
-					// }
-					else{
-						image[i*height+j]=Eigen::Vector3d(53.23,80.11,67.22);
-						std::cout<<"WTF"<<index<<std::endl;
-						next=true;
-					}
+			image=new Eigen::Vector3d[(width-1)*(height)];
+			for(int i=0;i<seam.size();i++){
+				for(int j=0;j<seam[i];j++){
+					image[j*height+i]=temp[j*height+i];
+					
+				}
+				for(int j=seam[i];j<width-1;j++){
+					image[j*height+i]=temp[(j+1)*height+i];					
 				}
 			}
 			width--;
-			std::cout<<"seam removed"<<std::endl;
-			delete [] temp;
-			// temp=image;
-			// image=new Eigen::Vector3d[width*height];
-			// for(int i=0;i<width;i++){
-			// 	for(int j=0;j<height;j++){
-			// 		image[i*height+j]=temp[i*(height+1)+j];
-			// 	}
-			// }
+			// std::cout<<"seam removed"<<std::endl;
+			seam.clear();
+			delete[] temp;
 			delete[] energy;
 			delete[] eng;
 			delete[] cost;
@@ -447,8 +281,7 @@ int main(int argc, char *argv[]) {
 			done=true;
 		}
 	}
-	//begin seam finding
-	CImg<double> output(input.width(),input.height(), input.depth(), input.spectrum(), 0);
+	CImg<double> output(atoi(argv[3]),atoi(argv[4]), input.depth(), input.spectrum(), 0);
 	for (unsigned int i=0; i<output.width(); i++) {
 		// std::cout<<"i"<<i<<std::endl;
 		for (unsigned int j=0; j<output.height(); j++) {
