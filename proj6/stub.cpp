@@ -141,6 +141,9 @@ void findSeam(std::vector<int> &seam,double *cost,int width,int height){
 int main(int argc, char *argv[]) {
 	CImg<double> input(argv[1]);
 	CImg<double> lab = input.RGBtoLab();
+	if(argc!=5){
+		exit(1);
+	}
 	Eigen::Vector3d *image = new Eigen::Vector3d[input.width()*input.height()];
 	Eigen::Vector3d *energy =new Eigen::Vector3d[input.width()*input.height()];
 	Eigen::Vector3d *grey =new Eigen::Vector3d[input.width()*input.height()];
