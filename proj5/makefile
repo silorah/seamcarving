@@ -11,7 +11,7 @@ GL_LIB = -lGL -lglut -lGLU
 
 TARGETS = fishtank viewer
 
-OBJECTS = kdTree.o
+OBJECTS = #kdTree.o
 
 #-----------------------------------------
 
@@ -38,6 +38,7 @@ viewer: $(OBJECTS) viewer.o
 
 fishtank: $(OBJECTS) fishtank.o
 	$(CC) $(OBJECTS) fishtank.o $(LDOPTS) -o fishtank
+
 
 #-----------------------------------------
 #-----------------------------------------
