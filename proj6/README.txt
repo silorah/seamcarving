@@ -15,7 +15,7 @@ build with make
 ./seamcarving input.jpg output.jpg width height
 
 
--Sorry I'm turning this in so late in the semester
+
 -I noticed that on my laptop at least I had to delete the output image in between runs if I wanted it to update.(might not matter but
 figured I should let you know)
 -grey.jpg is reddish for some reason no idea why
